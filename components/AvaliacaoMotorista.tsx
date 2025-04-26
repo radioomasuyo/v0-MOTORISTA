@@ -35,6 +35,8 @@ export default function AvaliacaoMotorista({ motorista, onAvaliacaoConcluida }: 
     setEnviando(true)
 
     try {
+      console.log("Enviando avaliação para motorista ID:", motorista.id)
+
       const { sucesso, mensagem } = await avaliarMotorista(motorista.id, {
         estrelas,
         comentario,

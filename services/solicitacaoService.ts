@@ -283,7 +283,11 @@ export const finalizarCorrida = async (
 
       // Notificar o cliente sobre a finalização da corrida
       if (motorista && motorista.nome) {
-        notificationService.notifyRideCompleted(motorista.nome)
+        try {
+          notificationService.notifyRideCompleted(motorista.nome)
+        } catch (e) {
+          console.error("Erro ao notificar cliente sobre finalização:", e)
+        }
       }
     }
 
@@ -294,7 +298,7 @@ export const finalizarCorrida = async (
   }
 }
 
-// Adicionar função para salvar avaliação do motorista
+// Adicionar função para salvar avaliação do motorista - VERSÃO SIMPLIFICADA
 export const avaliarMotorista = async (
   motoristaId: number,
   avaliacao: {
@@ -306,56 +310,25 @@ export const avaliarMotorista = async (
   mensagem?: string
 }> => {
   try {
-    // Buscar avaliação atual do motorista
-    const { data: motoristaDados, error: motoristaError } = await supabase
-      .from("drivers")
-      .select("id, avaliacao, avaliacoes_total")
-      .eq("id", motoristaId)
-      .single()
+    console.log("Avaliando motorista ID:", motoristaId, "com", avaliacao.estrelas, "estrelas")
 
-    if (motoristaError) {
-      console.error("Error fetching driver data:", motoristaError)
-      return { sucesso: false, mensagem: "Erro ao buscar dados do motorista" }
-    }
-
-    // Calcular nova avaliação média
-    const avaliacoesTotal = (motoristaDados.avaliacoes_total || 0) + 1
-    const avaliacaoAtual = motoristaDados.avaliacao || 5
-    const novaAvaliacao = (avaliacaoAtual * (avaliacoesTotal - 1) + avaliacao.estrelas) / avaliacoesTotal
-
-    // Atualizar avaliação do motorista
-    const { error: driverUpdateError } = await supabase
+    // Atualizar diretamente a avaliação do motorista na tabela drivers
+    const { error } = await supabase
       .from("drivers")
       .update({
-        avaliacao: novaAvaliacao,
-        avaliacoes_total: avaliacoesTotal,
+        avaliacao: avaliacao.estrelas,
       })
       .eq("id", motoristaId)
 
-    if (driverUpdateError) {
-      console.error("Error updating driver rating:", driverUpdateError)
+    if (error) {
+      console.error("Erro ao atualizar avaliação do motorista:", error)
       return { sucesso: false, mensagem: "Erro ao atualizar avaliação do motorista" }
     }
 
-    // Registrar a avaliação no histórico
-    const { error: avaliacaoError } = await supabase.from("avaliacoes").insert([
-      {
-        motorista_id: motoristaId,
-        estrelas: avaliacao.estrelas,
-        comentario: avaliacao.comentario,
-        data: new Date().toISOString(),
-      },
-    ])
-
-    if (avaliacaoError) {
-      console.error("Error saving rating:", avaliacaoError)
-      // Não retornar erro aqui, pois a avaliação já foi atualizada no motorista
-      // Apenas registrar o erro
-    }
-
+    console.log("Avaliação atualizada com sucesso")
     return { sucesso: true }
   } catch (error) {
-    console.error("Error in avaliarMotorista:", error)
+    console.error("Erro completo em avaliarMotorista:", error)
     return { sucesso: false, mensagem: "Erro ao processar avaliação" }
   }
 }

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Send, MapPin, Search, Loader2, Phone, X, Users, Car } from "lucide-react"
+import { ArrowLeft, Send, MapPin, Search, Loader2, Phone, X, Users, Car, Star } from "lucide-react"
 import Link from "next/link"
 import { geocodeAddress } from "@/lib/distance-service"
 import NotificationControl from "@/components/NotificationControl"
@@ -33,6 +33,7 @@ type MotoristaAceito = {
   placa: string
   tempoEspera: number
   telefone?: string
+  avaliacao?: number
 }
 
 type Coordenadas = {
@@ -46,7 +47,7 @@ type CorridaFinalizadaType = {
     id: number
     nome: string
     foto: string
-  }
+  } | null
 } | null
 
 // Coordenadas simuladas para quando a geolocalização não estiver disponível
@@ -117,6 +118,7 @@ export default function ClientePage() {
           placa: motorista.placa,
           tempoEspera: motorista.tempoEspera || 5, // Tempo padrão se não for fornecido
           telefone: motorista.telefone,
+          avaliacao: motorista.avaliacao,
         })
 
         // Verificar se o motorista chegou - verificando o status dentro do objeto motorista
@@ -172,7 +174,7 @@ export default function ClientePage() {
     } catch (error) {
       console.error("Erro ao verificar solicitação:", error)
     }
-  }, [solicitacaoId, motoristaAceito, notificationsInitialized, motoristaChegou, mostrarAvaliacao])
+  }, [solicitacaoId, notificationsInitialized, motoristaChegou, mostrarAvaliacao])
 
   // Marcar componente como montado para evitar problemas de hidratação
   useEffect(() => {
@@ -289,6 +291,7 @@ export default function ClientePage() {
           placa: motorista.placa,
           tempoEspera: motorista.tempoEspera || 5,
           telefone: motorista.telefone,
+          avaliacao: motorista.avaliacao,
         })
 
         // Verificar se o motorista já chegou
@@ -358,6 +361,7 @@ export default function ClientePage() {
           placa: motorista.placa,
           tempoEspera: tempoEstimado,
           telefone: motorista.telefone,
+          avaliacao: motorista.avaliacao || 5.0,
         })
 
         // Notificar o cliente
@@ -915,6 +919,24 @@ export default function ClientePage() {
                     </div>
                     <div className="flex-grow text-center md:text-left">
                       <h3 className="font-bold text-xl">{motoristaAceito.nome}</h3>
+                      <div className="flex items-center justify-center md:justify-start mt-1">
+                        <div className="flex">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              size={16}
+                              className={`${
+                                star <= Math.round(motoristaAceito.avaliacao || 5)
+                                  ? "text-yellow-400 fill-yellow-400"
+                                  : "text-gray-300"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="ml-1 text-sm font-medium">
+                          {motoristaAceito.avaliacao?.toFixed(1) || "5.0"}
+                        </span>
+                      </div>
                       <div className="flex flex-col md:flex-row md:gap-4 mt-2">
                         <div className="flex items-center justify-center md:justify-start">
                           <Car size={18} className="text-gray-600 mr-2" />
@@ -933,6 +955,22 @@ export default function ClientePage() {
                     className="w-32 h-32 rounded-full object-cover mb-4 border-4 border-blue-500"
                   />
                   <h3 className="font-bold text-xl text-center">{getPrimeiroNome(motoristaAceito.nome)}</h3>
+                  <div className="flex items-center justify-center mt-1">
+                    <div className="flex">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          size={16}
+                          className={`${
+                            star <= Math.round(motoristaAceito.avaliacao || 5)
+                              ? "text-yellow-400 fill-yellow-400"
+                              : "text-gray-300"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="ml-1 text-sm font-medium">{motoristaAceito.avaliacao?.toFixed(1) || "5.0"}</span>
+                  </div>
                   <div className="bg-gray-100 px-4 py-2 rounded-full mt-2 text-center">
                     <p className="text-gray-800 font-medium">{motoristaAceito.veiculo}</p>
                     <p className="text-gray-600 font-bold">{motoristaAceito.placa}</p>

@@ -1,4 +1,4 @@
--- Verificar a estrutura da tabela drivers
+-- Verificar se a tabela drivers tem a coluna avaliacao
 SELECT column_name, data_type 
 FROM information_schema.columns 
 WHERE table_name = 'drivers';

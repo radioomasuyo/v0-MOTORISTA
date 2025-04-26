@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import { ArrowLeft, CheckCircle, XCircle, MapPin, Navigation, LogIn, MessageCircle, Map } from "lucide-react"
+import { ArrowLeft, CheckCircle, XCircle, MapPin, Navigation, LogIn, MessageCircle, Map, Star } from "lucide-react"
 import Link from "next/link"
 import NotificationControl from "@/components/NotificationControl"
 import { notificationService } from "@/services/notificationService"
@@ -729,6 +729,7 @@ export default function MotoristaPage() {
           telefone: motorista.telefone,
           tempoEspera: tempoEstimado,
           coordenadas: motoristaCoords,
+          avaliacao: motorista.avaliacao || 5.0,
         }
 
         // Atualizar solicitação
@@ -1202,6 +1203,22 @@ export default function MotoristaPage() {
                 />
                 <div>
                   <h2 className="font-bold text-lg">{motorista.nome || "Motorista"}</h2>
+                  <div className="flex items-center">
+                    <div className="flex">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          size={16}
+                          className={`${
+                            star <= Math.round(motorista.avaliacao || 5)
+                              ? "text-yellow-400 fill-yellow-400"
+                              : "text-gray-300"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="ml-1 text-sm font-medium">{motorista.avaliacao?.toFixed(1) || "5.0"}</span>
+                  </div>
                   <p className="text-gray-600">
                     {motorista.veiculo || "Veículo não especificado"} - {motorista.placa || "Placa não especificada"}
                   </p>

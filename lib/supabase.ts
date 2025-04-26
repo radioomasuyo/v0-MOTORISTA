@@ -11,6 +11,7 @@ export const getSupabaseClient = () => {
 
 export type Driver = {
   id: number
+  created_at?: string
   codigo: string
   nome: string
   telefone: string
@@ -19,12 +20,8 @@ export type Driver = {
   placa: string
   foto: string
   corridas: number
-  status: string
+  status: "online" | "offline" | "busy"
   ativo: boolean
-  created_at: string
-  latitude?: number
-  longitude?: number
-  avaliacoes_total?: number
 }
 
 export type Notification = {

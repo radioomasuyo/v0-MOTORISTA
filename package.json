@@ -62,8 +62,8 @@
     "leaflet": "latest",
     "react-chartjs-2": "latest",
     "@radix-ui/react-icons": "latest",
-    "@supabase/supabase-js": "latest",
-    "react-leaflet": "latest"
+    "react-leaflet": "latest",
+    "@supabase/supabase-js": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",

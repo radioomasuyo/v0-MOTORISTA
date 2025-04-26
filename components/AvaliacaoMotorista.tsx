@@ -36,8 +36,20 @@ export default function AvaliacaoMotorista({ motorista, onAvaliacaoConcluida }: 
 
     try {
       console.log("Enviando avaliação para motorista ID:", motorista.id)
+      console.log("Dados da avaliação:", { estrelas, comentario })
 
-      const { sucesso, mensagem } = await avaliarMotorista(motorista.id, {
+      // Verificar se o ID do motorista é válido
+      if (!motorista.id || isNaN(Number(motorista.id))) {
+        toast({
+          title: "Erro",
+          description: "ID do motorista inválido",
+          variant: "destructive",
+        })
+        setEnviando(false)
+        return
+      }
+
+      const { sucesso, mensagem } = await avaliarMotorista(Number(motorista.id), {
         estrelas,
         comentario,
       })
@@ -82,6 +94,7 @@ export default function AvaliacaoMotorista({ motorista, onAvaliacaoConcluida }: 
             className="w-24 h-24 rounded-full object-cover mb-2"
           />
           <h3 className="font-medium text-lg">{motorista.nome}</h3>
+          <p className="text-sm text-gray-500">ID: {motorista.id}</p>
         </div>
 
         <div className="flex justify-center space-x-1">

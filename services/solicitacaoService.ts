@@ -298,19 +298,13 @@ export const finalizarCorrida = async (
   }
 }
 
-// Adicionar função para salvar avaliação do motorista - VERSÃO SIMPLIFICADA
+// Adicionar função para salvar avaliação do motorista - VERSÃO ULTRA SIMPLIFICADA
 export const avaliarMotorista = async (
   motoristaId: number,
-  avaliacao: {
-    estrelas: number
-    comentario: string
-  },
-): Promise<{
-  sucesso: boolean
-  mensagem?: string
-}> => {
+  avaliacao: { estrelas: number; comentario: string },
+): Promise<{ sucesso: boolean; mensagem: string }> => {
   try {
-    console.log("Avaliando motorista ID:", motoristaId, "com", avaliacao.estrelas, "estrelas")
+    console.log(`Avaliando motorista ${motoristaId} com ${avaliacao.estrelas} estrelas`)
 
     // Atualizar diretamente a avaliação do motorista na tabela drivers
     const { error } = await supabase
@@ -326,9 +320,9 @@ export const avaliarMotorista = async (
     }
 
     console.log("Avaliação atualizada com sucesso")
-    return { sucesso: true }
+    return { sucesso: true, mensagem: "Avaliação enviada com sucesso" }
   } catch (error) {
-    console.error("Erro completo em avaliarMotorista:", error)
-    return { sucesso: false, mensagem: "Erro ao processar avaliação" }
+    console.error("Erro ao avaliar motorista:", error)
+    return { sucesso: false, mensagem: "Ocorreu um erro ao processar sua avaliação" }
   }
 }

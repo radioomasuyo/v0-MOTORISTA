@@ -50,7 +50,6 @@ export default function AdminLoginPage() {
 
       // Mostrar opções de admin
       setAutenticado(true)
-      router.push("/admin")
     } else {
       setErro("Senha incorreta. Tente novamente.")
     }

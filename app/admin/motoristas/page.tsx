@@ -660,16 +660,15 @@ export default function MotoristasPage() {
     )
   }
 
-  // Função para voltar para a página inicial do admin
+  // Função para voltar para a página de administração
   const handleVoltar = () => {
-    // Redirecionar para a página inicial do admin
-    router.push("/")
+    router.push("/admin")
   }
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <header className="bg-blue-600 p-4 text-white flex items-center shadow-md">
-        {/* Corrigido: Agora usando o router para voltar para a página inicial */}
+        {/* Corrigido: Agora usando o router para voltar para /admin */}
         <Button variant="ghost" className="mr-4 p-0 hover:bg-transparent" onClick={handleVoltar}>
           <ArrowLeft size={24} className="text-white" />
         </Button>

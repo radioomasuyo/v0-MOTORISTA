@@ -231,20 +231,6 @@ export interface NotificationOptions {
   sound?: boolean
   vibrate?: boolean
   duration?: number
-  // Novas opções para notificações do sistema
-  showInSystem?: boolean
-  requireInteraction?: boolean
-  icon?: string
-  badge?: string
-  tag?: string
-  actions?: NotificationAction[]
-}
-
-// Interface para ações de notificação
-export interface NotificationAction {
-  action: string
-  title: string
-  icon?: string
 }
 
 // Função para mostrar uma notificação
@@ -255,12 +241,6 @@ export const notify = ({
   sound = true,
   vibrate: shouldVibrate = true,
   duration = 5000,
-  showInSystem = true,
-  requireInteraction = false,
-  icon = "/favicon.ico",
-  badge,
-  tag,
-  actions = [],
 }: NotificationOptions) => {
   if (sound) {
     // Mapeia "info" para "notification" para reprodução de som
@@ -274,79 +254,11 @@ export const notify = ({
     vibrate()
   }
 
-  // Mostrar toast na interface
   toast({
     title: title,
     description: body,
     duration: duration,
   })
-
-  // Mostrar notificação do sistema se solicitado e permitido
-  if (
-    showInSystem &&
-    typeof window !== "undefined" &&
-    "Notification" in window &&
-    Notification.permission === "granted"
-  ) {
-    try {
-      // Configurações da notificação
-      const notificationOptions: NotificationOptions = {
-        body,
-        icon,
-        requireInteraction,
-        vibrate: shouldVibrate ? [200, 100, 200] : undefined,
-      }
-
-      // Adicionar badge se fornecido
-      if (badge) {
-        notificationOptions.badge = badge
-      }
-
-      // Adicionar tag se fornecido
-      if (tag) {
-        notificationOptions.tag = tag
-      }
-
-      // Adicionar ações se fornecidas
-      if (actions.length > 0) {
-        notificationOptions.actions = actions
-      }
-
-      // Criar a notificação
-      const notification = new Notification(title || "Jamal Express", notificationOptions)
-
-      // Configurar manipuladores de eventos
-      notification.onclick = () => {
-        window.focus()
-        notification.close()
-      }
-
-      // Registrar manipulador de eventos para ações de notificação
-      if ("actions" in Notification.prototype) {
-        navigator.serviceWorker.ready
-          .then((registration) => {
-            registration.addEventListener("notificationclick", (event) => {
-              const clickedNotification = event.notification
-              clickedNotification.close()
-
-              // Lidar com a ação clicada
-              if (event.action) {
-                console.log("Ação de notificação clicada:", event.action)
-                // Aqui você pode adicionar lógica específica para cada ação
-              } else {
-                // Clique na notificação principal
-                window.focus()
-              }
-            })
-          })
-          .catch((err) => {
-            console.error("Erro ao registrar manipulador de eventos de notificação:", err)
-          })
-      }
-    } catch (error) {
-      console.error("Erro ao criar notificação do sistema:", error)
-    }
-  }
 }
 
 // Função para solicitar permissão para notificações
@@ -355,34 +267,11 @@ export const requestPermission = async (): Promise<boolean> => {
     if (Notification.permission === "granted") {
       return true
     } else if (Notification.permission !== "denied") {
-      try {
-        const permission = await Notification.requestPermission()
-
-        // Se a permissão foi concedida, registrar o service worker
-        if (permission === "granted") {
-          registerServiceWorker()
-        }
-
-        return permission === "granted"
-      } catch (error) {
-        console.error("Erro ao solicitar permissão de notificação:", error)
-        return false
-      }
+      const permission = await Notification.requestPermission()
+      return permission === "granted"
     }
   }
   return false
-}
-
-// Função para registrar o service worker
-const registerServiceWorker = async () => {
-  if ("serviceWorker" in navigator) {
-    try {
-      const registration = await navigator.serviceWorker.register("/notification-sw.js")
-      console.log("Service Worker registrado com sucesso:", registration)
-    } catch (error) {
-      console.error("Erro ao registrar Service Worker:", error)
-    }
-  }
 }
 
 // Função para verificar se os sons estão habilitados
@@ -430,19 +319,6 @@ export const notifyNewRideRequest = (clientName: string, destination: string, re
     type: "notification",
     sound: true,
     vibrate: true,
-    showInSystem: true,
-    requireInteraction: true,
-    tag: `ride-request-${requestId}`,
-    actions: [
-      {
-        action: "accept",
-        title: "Aceitar",
-      },
-      {
-        action: "reject",
-        title: "Recusar",
-      },
-    ],
   })
 }
 
@@ -454,9 +330,6 @@ export const notifyRideAccepted = (driverName: string, tempoEstimado: number) =>
     type: "success",
     sound: true,
     vibrate: true,
-    showInSystem: true,
-    requireInteraction: true,
-    tag: "ride-accepted",
   })
 }
 
@@ -468,8 +341,6 @@ export const notifyRideRequested = () => {
     type: "info",
     sound: true,
     vibrate: true,
-    showInSystem: true,
-    tag: "ride-requested",
   })
 }
 
@@ -496,9 +367,6 @@ export const notifyDriverArrived = (motoristaNome: string): void => {
           body: `${motoristaNome} chegou ao local de embarque.`,
           icon: "/favicon.ico",
           tag: "motorista-chegou",
-          requireInteraction: true,
-          badge: "/images/motorista-marker.png",
-          vibrate: [200, 100, 200],
         })
 
         // Focar na janela quando a notificação for clicada
@@ -563,15 +431,6 @@ export const notifyRideCompleted = (motoristaNome: string): void => {
           body: `Sua corrida com ${motoristaNome} foi finalizada. Por favor, avalie o motorista.`,
           icon: "/favicon.ico",
           tag: "corrida-finalizada",
-          requireInteraction: true,
-          badge: "/images/motorista-marker.png",
-          vibrate: [200, 100, 200, 100, 200],
-          actions: [
-            {
-              action: "avaliar",
-              title: "Avaliar agora",
-            },
-          ],
         })
 
         // Focar na janela quando a notificação for clicada
@@ -625,11 +484,6 @@ if (typeof window !== "undefined") {
     initAudioContext()
   } else {
     window.addEventListener("load", initAudioContext)
-  }
-
-  // Registrar o service worker se as notificações estiverem habilitadas
-  if (Notification.permission === "granted") {
-    registerServiceWorker()
   }
 }
 

@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase"
 import { notificationService } from "./notificationService"
+import { getSupabaseClient } from "@/lib/supabase"
 
 // Enviar uma solicitação de corrida
 export const enviarSolicitacao = async (dados: {
@@ -299,30 +300,84 @@ export const finalizarCorrida = async (
 }
 
 // Adicionar função para salvar avaliação do motorista - VERSÃO ULTRA SIMPLIFICADA
-export const avaliarMotorista = async (
-  motoristaId: number,
-  avaliacao: { estrelas: number; comentario: string },
-): Promise<{ sucesso: boolean; mensagem: string }> => {
+// export const avaliarMotorista = async (
+//   motoristaId: number,
+//   avaliacao: { estrelas: number; comentario: string },
+// ): Promise<{ sucesso: boolean; mensagem: string }> => {
+//   try {
+//     console.log(`Avaliando motorista ${motoristaId} com ${avaliacao.estrelas} estrelas`)
+
+//     // Atualizar diretamente a avaliação do motorista na tabela drivers
+//     const { error } = await supabase
+//       .from("drivers")
+//       .update({
+//         avaliacao: avaliacao.estrelas,
+//       })
+//       .eq("id", motoristaId)
+
+//     if (error) {
+//       console.error("Erro ao atualizar avaliação do motorista:", error)
+//       return { sucesso: false, mensagem: "Erro ao atualizar avaliação do motorista" }
+//     }
+
+//     console.log("Avaliação atualizada com sucesso")
+//     return { sucesso: true, mensagem: "Avaliação enviada com sucesso" }
+//   } catch (error) {
+//     console.error("Erro ao avaliar motorista:", error)
+//     return { sucesso: false, mensagem: "Ocorreu um erro ao processar sua avaliação" }
+//   }
+// }
+
+// Função para avaliar o motorista
+export async function avaliarMotorista(codigoMotorista: string, avaliacao: number, comentario = ""): Promise<boolean> {
   try {
-    console.log(`Avaliando motorista ${motoristaId} com ${avaliacao.estrelas} estrelas`)
+    console.log(`Avaliando motorista ${codigoMotorista} com nota ${avaliacao}`)
 
-    // Atualizar diretamente a avaliação do motorista na tabela drivers
-    const { error } = await supabase
+    const supabase = getSupabaseClient()
+
+    // 1. Buscar o motorista pelo código
+    const { data: motorista, error: erroMotorista } = await supabase
       .from("drivers")
-      .update({
-        avaliacao: avaliacao.estrelas,
-      })
-      .eq("id", motoristaId)
+      .select("*")
+      .eq("codigo", codigoMotorista)
+      .single()
 
-    if (error) {
-      console.error("Erro ao atualizar avaliação do motorista:", error)
-      return { sucesso: false, mensagem: "Erro ao atualizar avaliação do motorista" }
+    if (erroMotorista) {
+      console.error("Erro ao buscar motorista:", erroMotorista)
+      throw new Error("Erro ao buscar dados do motorista")
     }
 
-    console.log("Avaliação atualizada com sucesso")
-    return { sucesso: true, mensagem: "Avaliação enviada com sucesso" }
+    if (!motorista) {
+      throw new Error("Motorista não encontrado")
+    }
+
+    // 2. Atualizar a avaliação do motorista
+    // Calcular a nova média de avaliação
+    const avaliacaoAtual = motorista.avaliacao || 5
+    const corridas = motorista.corridas || 0
+
+    // Se for a primeira corrida, a avaliação será a nota atual
+    // Caso contrário, calcular a média ponderada
+    const novaAvaliacao = corridas === 0 ? avaliacao : (avaliacaoAtual * corridas + avaliacao) / (corridas + 1)
+
+    // Atualizar o motorista com a nova avaliação
+    const { error: erroAtualizacao } = await supabase
+      .from("drivers")
+      .update({
+        avaliacao: novaAvaliacao,
+        corridas: corridas + 1,
+      })
+      .eq("id", motorista.id)
+
+    if (erroAtualizacao) {
+      console.error("Erro ao atualizar avaliação:", erroAtualizacao)
+      throw new Error("Erro ao atualizar avaliação do motorista")
+    }
+
+    console.log(`Avaliação atualizada com sucesso: ${novaAvaliacao.toFixed(1)}`)
+    return true
   } catch (error) {
     console.error("Erro ao avaliar motorista:", error)
-    return { sucesso: false, mensagem: "Ocorreu um erro ao processar sua avaliação" }
+    throw error
   }
 }

@@ -24,10 +24,12 @@ import {
   CheckCircle,
   XCircle,
   RefreshCw,
+  Star,
 } from "lucide-react"
-import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 
 // Adicione a importação do toast no topo do arquivo
 import { toast } from "@/hooks/use-toast"
@@ -70,6 +72,12 @@ export default function MotoristasPage() {
   const [uploadingFoto, setUploadingFoto] = useState(false)
   const [gerandoCodigo, setGerandoCodigo] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Estado para o diálogo de avaliação
+  const [avaliacaoDialogOpen, setAvaliacaoDialogOpen] = useState(false)
+  const [motoristaAvaliacao, setMotoristaAvaliacao] = useState<Motorista | null>(null)
+  const [novaAvaliacao, setNovaAvaliacao] = useState<number>(5)
+  const [atualizandoAvaliacao, setAtualizandoAvaliacao] = useState(false)
 
   // Adicionar estado para o filtro de status
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>("todos")
@@ -582,12 +590,89 @@ export default function MotoristasPage() {
     }
   }
 
+  // Função para abrir o diálogo de avaliação
+  const handleOpenAvaliacaoDialog = (motorista: Motorista) => {
+    setMotoristaAvaliacao(motorista)
+    setNovaAvaliacao(motorista.avaliacao || 5)
+    setAvaliacaoDialogOpen(true)
+  }
+
+  // Função para atualizar a avaliação do motorista
+  const handleAtualizarAvaliacao = async () => {
+    if (!motoristaAvaliacao) return
+
+    setAtualizandoAvaliacao(true)
+
+    try {
+      const supabase = getSupabaseClient()
+      const { error } = await supabase
+        .from("drivers")
+        .update({ avaliacao: novaAvaliacao })
+        .eq("id", motoristaAvaliacao.id)
+
+      if (error) throw error
+
+      // Atualizar lista local
+      setMotoristas(motoristas.map((m) => (m.id === motoristaAvaliacao.id ? { ...m, avaliacao: novaAvaliacao } : m)))
+
+      toast({
+        title: "Avaliação atualizada",
+        description: `A avaliação de ${motoristaAvaliacao.nome} foi atualizada para ${novaAvaliacao.toFixed(1)}`,
+        variant: "success",
+      })
+
+      setAvaliacaoDialogOpen(false)
+    } catch (error) {
+      console.error("Erro ao atualizar avaliação:", error)
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar a avaliação do motorista",
+        variant: "destructive",
+      })
+    } finally {
+      setAtualizandoAvaliacao(false)
+    }
+  }
+
+  // Função para renderizar as estrelas de avaliação
+  const renderEstrelas = (avaliacao: number) => {
+    const estrelas = []
+    const avaliacaoArredondada = Math.round(avaliacao * 2) / 2 // Arredonda para 0.5 mais próximo
+
+    for (let i = 1; i <= 5; i++) {
+      if (i <= avaliacaoArredondada) {
+        // Estrela cheia
+        estrelas.push(<Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />)
+      } else if (i - 0.5 === avaliacaoArredondada) {
+        // Meia estrela (não implementada aqui, mas poderia ser com um SVG personalizado)
+        estrelas.push(<Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400 opacity-50" />)
+      } else {
+        // Estrela vazia
+        estrelas.push(<Star key={i} className="w-4 h-4 text-gray-300" />)
+      }
+    }
+
+    return (
+      <div className="flex items-center">
+        {estrelas}
+        <span className="ml-1 text-sm font-medium">{avaliacao.toFixed(1)}</span>
+      </div>
+    )
+  }
+
+  // Função para voltar para a página inicial do admin
+  const handleVoltar = () => {
+    // Redirecionar para a página inicial do admin
+    router.push("/")
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <header className="bg-blue-600 p-4 text-white flex items-center shadow-md">
-        <Link href="/admin" className="mr-4">
-          <ArrowLeft size={24} />
-        </Link>
+        {/* Corrigido: Agora usando o router para voltar para a página inicial */}
+        <Button variant="ghost" className="mr-4 p-0 hover:bg-transparent" onClick={handleVoltar}>
+          <ArrowLeft size={24} className="text-white" />
+        </Button>
         <h1 className="text-xl font-bold">Cadastro de Motoristas</h1>
       </header>
 
@@ -845,6 +930,72 @@ export default function MotoristasPage() {
           </CardContent>
         </Card>
       </main>
+
+      {/* Diálogo para editar avaliação */}
+      <Dialog open={avaliacaoDialogOpen} onOpenChange={setAvaliacaoDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Avaliação do Motorista</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {motoristaAvaliacao && (
+              <div className="flex items-center space-x-4">
+                <img
+                  src={motoristaAvaliacao.foto || "/placeholder.svg?height=50&width=50"}
+                  alt={motoristaAvaliacao.nome}
+                  className="h-12 w-12 rounded-full object-cover"
+                />
+                <div>
+                  <p className="font-medium">{motoristaAvaliacao.nome}</p>
+                  <p className="text-sm text-gray-500">Código: {motoristaAvaliacao.codigo}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="avaliacao">Avaliação (1-5)</Label>
+              <div className="flex items-center space-x-2">
+                <Input
+                  id="avaliacao"
+                  type="number"
+                  min="1"
+                  max="5"
+                  step="0.1"
+                  value={novaAvaliacao}
+                  onChange={(e) => setNovaAvaliacao(Number.parseFloat(e.target.value))}
+                  className="w-24"
+                />
+                <div className="flex">
+                  {[1, 2, 3, 4, 5].map((valor) => (
+                    <Star
+                      key={valor}
+                      className={`w-6 h-6 cursor-pointer ${
+                        valor <= novaAvaliacao ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+                      }`}
+                      onClick={() => setNovaAvaliacao(valor)}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setAvaliacaoDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleAtualizarAvaliacao} disabled={atualizandoAvaliacao}>
+              {atualizandoAvaliacao ? (
+                <>
+                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                "Salvar Avaliação"
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 
@@ -886,6 +1037,7 @@ export default function MotoristasPage() {
               <TableHead>Telefone</TableHead>
               <TableHead>Veículo</TableHead>
               <TableHead>Placa</TableHead>
+              <TableHead>Avaliação</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Online/Offline</TableHead>
               <TableHead>Ativo</TableHead>
@@ -907,6 +1059,16 @@ export default function MotoristasPage() {
                 <TableCell>{formatarTelefone(motorista.telefone)}</TableCell>
                 <TableCell>{motorista.veiculo}</TableCell>
                 <TableCell>{motorista.placa}</TableCell>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto p-0 hover:bg-transparent"
+                    onClick={() => handleOpenAvaliacaoDialog(motorista)}
+                  >
+                    {renderEstrelas(motorista.avaliacao || 5)}
+                  </Button>
+                </TableCell>
                 <TableCell>
                   <span
                     className={`px-2 py-1 rounded text-xs ${

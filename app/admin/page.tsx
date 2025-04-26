@@ -3,12 +3,8 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Card } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Users, MapPin, ArrowLeft, Settings, LayoutDashboard } from "lucide-react"
-import MotoristasAdmin from "@/components/admin/MotoristasAdmin"
-import DestinosAdmin from "@/components/admin/DestinosAdmin"
-import ConfiguracoesAdmin from "@/components/admin/ConfiguracoesAdmin"
+import { Card, CardContent } from "@/components/ui/card"
+import { ArrowLeft, Users, MapPin, Settings, LayoutDashboard } from "lucide-react"
 
 export default function AdminPage() {
   const router = useRouter()
@@ -65,51 +61,62 @@ export default function AdminPage() {
       </header>
 
       <main className="flex-1 p-4">
-        <Tabs defaultValue="motoristas" className="w-full">
-          <TabsList className="grid grid-cols-4 mb-4">
-            <TabsTrigger value="motoristas" className="flex items-center gap-2">
-              <Users size={16} />
-              <span className="hidden sm:inline">Motoristas</span>
-            </TabsTrigger>
-            <TabsTrigger value="destinos" className="flex items-center gap-2">
-              <MapPin size={16} />
-              <span className="hidden sm:inline">Destinos</span>
-            </TabsTrigger>
-            <TabsTrigger value="configuracoes" className="flex items-center gap-2">
-              <Settings size={16} />
-              <span className="hidden sm:inline">Configurações</span>
-            </TabsTrigger>
-            <TabsTrigger value="dashboard" className="flex items-center gap-2" disabled>
-              <LayoutDashboard size={16} />
-              <span className="hidden sm:inline">Dashboard</span>
-              <span className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded-full">Em breve</span>
-            </TabsTrigger>
-          </TabsList>
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl font-bold text-center mb-8">Painel Administrativo</h2>
 
-          <Card className="border-t-0 rounded-tl-none">
-            <TabsContent value="motoristas" className="mt-0">
-              <MotoristasAdmin />
-            </TabsContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Card de Motoristas */}
+            <Card className="hover:shadow-lg transition-shadow">
+              <Link href="/admin/motoristas">
+                <CardContent className="p-6 flex flex-col items-center text-center">
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                    <Users className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">Cadastro de Motoristas</h3>
+                  <p className="text-gray-600">Gerencie os motoristas do sistema</p>
+                </CardContent>
+              </Link>
+            </Card>
 
-            <TabsContent value="destinos" className="mt-0">
-              <DestinosAdmin />
-            </TabsContent>
+            {/* Card de Destinos */}
+            <Card className="hover:shadow-lg transition-shadow">
+              <Link href="/admin/destinos">
+                <CardContent className="p-6 flex flex-col items-center text-center">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                    <MapPin className="h-8 w-8 text-green-600" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">Cadastro de Destinos</h3>
+                  <p className="text-gray-600">Gerencie os destinos disponíveis</p>
+                </CardContent>
+              </Link>
+            </Card>
 
-            <TabsContent value="configuracoes" className="mt-0">
-              <ConfiguracoesAdmin />
-            </TabsContent>
+            {/* Card de Configurações */}
+            <Card className="hover:shadow-lg transition-shadow">
+              <Link href="/admin/configuracoes">
+                <CardContent className="p-6 flex flex-col items-center text-center">
+                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
+                    <Settings className="h-8 w-8 text-purple-600" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">Configurações</h3>
+                  <p className="text-gray-600">Ajuste as configurações do sistema</p>
+                </CardContent>
+              </Link>
+            </Card>
 
-            <TabsContent value="dashboard" className="mt-0">
-              <div className="p-6 text-center">
-                <LayoutDashboard size={48} className="mx-auto text-gray-300 mb-4" />
-                <h3 className="text-xl font-bold text-gray-700 mb-2">Dashboard em desenvolvimento</h3>
-                <p className="text-gray-500">
-                  Esta funcionalidade estará disponível em breve. Fique atento às atualizações!
-                </p>
-              </div>
-            </TabsContent>
-          </Card>
-        </Tabs>
+            {/* Card de Dashboard (Em breve) */}
+            <Card className="hover:shadow-lg transition-shadow opacity-70">
+              <CardContent className="p-6 flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <LayoutDashboard className="h-8 w-8 text-gray-400" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Dashboard</h3>
+                <p className="text-gray-600">Visualize estatísticas e relatórios</p>
+                <span className="mt-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">Em breve</span>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </main>
     </div>
   )

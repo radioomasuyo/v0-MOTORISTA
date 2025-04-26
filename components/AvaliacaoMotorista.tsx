@@ -1,32 +1,33 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Star } from "lucide-react"
 import { avaliarMotorista } from "@/services/solicitacaoService"
 import { toast } from "@/hooks/use-toast"
 
 interface AvaliacaoMotoristaProps {
-  motorista: {
-    id: number
-    nome: string
-    foto: string
-  }
-  onAvaliacaoConcluida: () => void
+  codigoMotorista: string
+  nomeMotorista: string
+  onAvaliacaoCompleta: () => void
 }
 
-export default function AvaliacaoMotorista({ motorista, onAvaliacaoConcluida }: AvaliacaoMotoristaProps) {
-  const [estrelas, setEstrelas] = useState(5)
+export default function AvaliacaoMotorista({
+  codigoMotorista,
+  nomeMotorista,
+  onAvaliacaoCompleta,
+}: AvaliacaoMotoristaProps) {
+  const [avaliacao, setAvaliacao] = useState(5)
   const [comentario, setComentario] = useState("")
   const [enviando, setEnviando] = useState(false)
 
   const handleSubmit = async () => {
-    if (estrelas < 1) {
+    if (avaliacao < 1 || avaliacao > 5) {
       toast({
         title: "Avaliação inválida",
-        description: "Por favor, selecione pelo menos 1 estrela",
+        description: "Por favor, selecione uma avaliação entre 1 e 5 estrelas",
         variant: "destructive",
       })
       return
@@ -35,44 +36,21 @@ export default function AvaliacaoMotorista({ motorista, onAvaliacaoConcluida }: 
     setEnviando(true)
 
     try {
-      console.log("Enviando avaliação para motorista ID:", motorista.id)
-      console.log("Dados da avaliação:", { estrelas, comentario })
+      await avaliarMotorista(codigoMotorista, avaliacao, comentario)
 
-      // Verificar se o ID do motorista é válido
-      if (!motorista.id || isNaN(Number(motorista.id))) {
-        toast({
-          title: "Erro",
-          description: "ID do motorista inválido",
-          variant: "destructive",
-        })
-        setEnviando(false)
-        return
-      }
-
-      const { sucesso, mensagem } = await avaliarMotorista(Number(motorista.id), {
-        estrelas,
-        comentario,
+      toast({
+        title: "Avaliação enviada",
+        description: "Obrigado por avaliar o motorista!",
+        variant: "success",
       })
 
-      if (sucesso) {
-        toast({
-          title: "Avaliação enviada",
-          description: "Obrigado por avaliar sua corrida!",
-          variant: "success",
-        })
-        onAvaliacaoConcluida()
-      } else {
-        toast({
-          title: "Erro",
-          description: mensagem || "Não foi possível enviar sua avaliação",
-          variant: "destructive",
-        })
-      }
-    } catch (error) {
+      onAvaliacaoCompleta()
+    } catch (error: any) {
       console.error("Erro ao enviar avaliação:", error)
+
       toast({
-        title: "Erro",
-        description: "Ocorreu um erro ao enviar sua avaliação",
+        title: "Erro ao enviar avaliação",
+        description: error.message || "Não foi possível enviar sua avaliação. Tente novamente.",
         variant: "destructive",
       })
     } finally {
@@ -81,33 +59,25 @@ export default function AvaliacaoMotorista({ motorista, onAvaliacaoConcluida }: 
   }
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="text-center">
-        <CardTitle>Avalie sua corrida</CardTitle>
-        <CardDescription>Conte-nos como foi sua experiência</CardDescription>
+    <Card className="w-full max-w-md mx-auto">
+      <CardHeader>
+        <CardTitle>Avalie sua viagem</CardTitle>
+        <CardDescription>Como foi sua experiência com {nomeMotorista}?</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="flex flex-col items-center">
-          <img
-            src={motorista.foto || "/placeholder.svg?height=150&width=150&query=profile"}
-            alt={motorista.nome}
-            className="w-24 h-24 rounded-full object-cover mb-2"
-          />
-          <h3 className="font-medium text-lg">{motorista.nome}</h3>
-          <p className="text-sm text-gray-500">ID: {motorista.id}</p>
-        </div>
-
-        <div className="flex justify-center space-x-1">
-          {[1, 2, 3, 4, 5].map((valor) => (
-            <button key={valor} type="button" onClick={() => setEstrelas(valor)} className="focus:outline-none">
-              <Star
-                size={32}
-                className={`${
-                  valor <= estrelas ? "text-yellow-400 fill-yellow-400" : "text-gray-300"
-                } hover:text-yellow-400 transition-colors`}
-              />
-            </button>
-          ))}
+      <CardContent className="space-y-4">
+        <div className="flex justify-center">
+          <div className="flex space-x-1">
+            {[1, 2, 3, 4, 5].map((estrela) => (
+              <button key={estrela} type="button" onClick={() => setAvaliacao(estrela)} className="focus:outline-none">
+                <Star
+                  size={32}
+                  className={`${
+                    estrela <= avaliacao ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+                  } transition-colors`}
+                />
+              </button>
+            ))}
+          </div>
         </div>
 
         <div>
@@ -116,17 +86,14 @@ export default function AvaliacaoMotorista({ motorista, onAvaliacaoConcluida }: 
           </label>
           <Textarea
             id="comentario"
-            placeholder="Conte-nos mais sobre sua experiência..."
+            placeholder="Deixe um comentário sobre sua experiência..."
             value={comentario}
             onChange={(e) => setComentario(e.target.value)}
             rows={4}
           />
         </div>
       </CardContent>
-      <CardFooter className="flex justify-between">
-        <Button variant="outline" onClick={onAvaliacaoConcluida} disabled={enviando}>
-          Pular
-        </Button>
+      <CardFooter className="flex justify-end">
         <Button onClick={handleSubmit} disabled={enviando}>
           {enviando ? "Enviando..." : "Enviar Avaliação"}
         </Button>

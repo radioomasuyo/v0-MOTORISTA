@@ -408,6 +408,70 @@ export const notifyDriverArrived = (motoristaNome: string): void => {
   }
 }
 
+// Função para notificar o cliente quando a corrida for finalizada
+export const notifyRideCompleted = (motoristaNome: string): void => {
+  try {
+    console.log("NotificationService: Iniciando notificação de corrida finalizada", motoristaNome)
+
+    // Reproduzir som de notificação
+    console.log("NotificationService: Reproduzindo som de finalização")
+    playSound("success")
+
+    // Vibrar o dispositivo se disponível
+    if (navigator.vibrate) {
+      console.log("NotificationService: Vibrando dispositivo")
+      navigator.vibrate([200, 100, 200, 100, 200])
+    }
+
+    // Mostrar notificação no navegador
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      console.log("NotificationService: Criando notificação do navegador")
+      try {
+        const notification = new Notification("Corrida finalizada!", {
+          body: `Sua corrida com ${motoristaNome} foi finalizada. Por favor, avalie o motorista.`,
+          icon: "/favicon.ico",
+          tag: "corrida-finalizada",
+        })
+
+        // Focar na janela quando a notificação for clicada
+        notification.onclick = () => {
+          window.focus()
+          notification.close()
+        }
+      } catch (e) {
+        console.error("Erro ao criar notificação do navegador:", e)
+      }
+    }
+
+    // Mostrar toast na interface
+    console.log("NotificationService: Mostrando toast na interface")
+    try {
+      toast({
+        title: "Corrida finalizada!",
+        description: `Sua corrida com ${motoristaNome} foi finalizada. Por favor, avalie o motorista.`,
+        variant: "success",
+      })
+    } catch (e) {
+      console.error("Erro ao mostrar toast:", e)
+    }
+
+    console.log("NotificationService: Notificação de finalização concluída com sucesso")
+  } catch (error) {
+    console.error("Erro ao notificar finalização da corrida:", error)
+
+    // Fallback para garantir que pelo menos o toast seja mostrado
+    try {
+      toast({
+        title: "Corrida finalizada!",
+        description: `Sua corrida com ${motoristaNome} foi finalizada. Por favor, avalie o motorista.`,
+        variant: "success",
+      })
+    } catch (e) {
+      console.error("Erro no fallback de notificação:", e)
+    }
+  }
+}
+
 // Inicializa o serviço
 if (typeof window !== "undefined") {
   // Carrega as configurações salvas
@@ -439,4 +503,5 @@ export const notificationService = {
   notifyRideAccepted,
   notifyRideRequested,
   notifyDriverArrived,
+  notifyRideCompleted,
 }

@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase"
+import { notificationService } from "./notificationService"
 
 // Enviar uma solicitação de corrida
 export const enviarSolicitacao = async (dados: {
@@ -242,6 +243,19 @@ export const finalizarCorrida = async (
   mensagem?: string
 }> => {
   try {
+    // Primeiro, obter a solicitação atual para acessar os dados do motorista
+    const { data: solicitacao, error: fetchError } = await supabase
+      .from("solicitacoes")
+      .select("*")
+      .eq("id", id)
+      .single()
+
+    if (fetchError) {
+      console.error("Error fetching solicitacao:", fetchError)
+      return { sucesso: false, mensagem: "Erro ao buscar solicitação" }
+    }
+
+    // Atualizar o status da solicitação para finalizada
     const { data, error } = await supabase.from("solicitacoes").update({ status: "finalizada" }).eq("id", id).select()
 
     if (error) {
@@ -249,12 +263,28 @@ export const finalizarCorrida = async (
       return { sucesso: false, mensagem: "Erro ao finalizar corrida" }
     }
 
+    // Extrair o objeto motorista
+    let motorista = solicitacao.motorista
+    if (typeof motorista === "string") {
+      try {
+        motorista = JSON.parse(motorista)
+      } catch (e) {
+        console.error("Error parsing motorista JSON:", e)
+        motorista = {}
+      }
+    }
+
     // Dispatch event to notify the client of completion
     if (typeof window !== "undefined" && data && data[0]) {
       const evento = new CustomEvent("corrida_finalizada", {
-        detail: { id, solicitacao: data[0] },
+        detail: { id, motorista, solicitacao: data[0] },
       })
       window.dispatchEvent(evento)
+
+      // Notificar o cliente sobre a finalização da corrida
+      if (motorista && motorista.nome) {
+        notificationService.notifyRideCompleted(motorista.nome)
+      }
     }
 
     return { sucesso: true }
@@ -266,7 +296,7 @@ export const finalizarCorrida = async (
 
 // Adicionar função para salvar avaliação do motorista
 export const avaliarMotorista = async (
-  solicitacaoId: number,
+  motoristaId: number,
   avaliacao: {
     estrelas: number
     comentario: string
@@ -276,45 +306,11 @@ export const avaliarMotorista = async (
   mensagem?: string
 }> => {
   try {
-    // Primeiro, obter a solicitação para pegar o ID do motorista
-    const { data: solicitacao, error: solicitacaoError } = await supabase
-      .from("solicitacoes")
-      .select("*")
-      .eq("id", solicitacaoId)
-      .single()
-
-    if (solicitacaoError || !solicitacao) {
-      console.error("Error fetching solicitacao for rating:", solicitacaoError)
-      return { sucesso: false, mensagem: "Erro ao buscar dados da corrida" }
-    }
-
-    // Extrair o ID do motorista
-    const motorista =
-      typeof solicitacao.motorista === "string" ? JSON.parse(solicitacao.motorista) : solicitacao.motorista
-
-    if (!motorista || !motorista.id) {
-      return { sucesso: false, mensagem: "Dados do motorista não encontrados" }
-    }
-
-    // Atualizar a solicitação com a avaliação
-    const { error: updateError } = await supabase
-      .from("solicitacoes")
-      .update({
-        avaliacao: avaliacao.estrelas,
-        comentario: avaliacao.comentario,
-      })
-      .eq("id", solicitacaoId)
-
-    if (updateError) {
-      console.error("Error updating solicitacao with rating:", updateError)
-      return { sucesso: false, mensagem: "Erro ao salvar avaliação na corrida" }
-    }
-
     // Buscar avaliação atual do motorista
     const { data: motoristaDados, error: motoristaError } = await supabase
       .from("drivers")
       .select("id, avaliacao, avaliacoes_total")
-      .eq("id", motorista.id)
+      .eq("id", motoristaId)
       .single()
 
     if (motoristaError) {
@@ -334,11 +330,27 @@ export const avaliarMotorista = async (
         avaliacao: novaAvaliacao,
         avaliacoes_total: avaliacoesTotal,
       })
-      .eq("id", motorista.id)
+      .eq("id", motoristaId)
 
     if (driverUpdateError) {
       console.error("Error updating driver rating:", driverUpdateError)
       return { sucesso: false, mensagem: "Erro ao atualizar avaliação do motorista" }
+    }
+
+    // Registrar a avaliação no histórico
+    const { error: avaliacaoError } = await supabase.from("avaliacoes").insert([
+      {
+        motorista_id: motoristaId,
+        estrelas: avaliacao.estrelas,
+        comentario: avaliacao.comentario,
+        data: new Date().toISOString(),
+      },
+    ])
+
+    if (avaliacaoError) {
+      console.error("Error saving rating:", avaliacaoError)
+      // Não retornar erro aqui, pois a avaliação já foi atualizada no motorista
+      // Apenas registrar o erro
     }
 
     return { sucesso: true }

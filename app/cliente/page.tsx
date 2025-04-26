@@ -112,7 +112,7 @@ export default function ClientePage() {
         setMotoristaAceito({
           id: motorista.id,
           nome: motorista.nome,
-          foto: motorista.foto || "/placeholder.svg?height=100&width=100",
+          foto: motorista.foto || "/diverse-professional-profiles.png",
           veiculo: motorista.veiculo,
           placa: motorista.placa,
           tempoEspera: motorista.tempoEspera || 5, // Tempo padrão se não for fornecido
@@ -145,11 +145,34 @@ export default function ClientePage() {
         setSolicitacaoId(null)
         localStorage.removeItem(SOLICITACAO_KEY)
         setErro("Todos os motoristas estão ocupados no momento. Por favor, tente novamente.")
+      } else if (data && data.status === "finalizada") {
+        // Se a corrida foi finalizada, mostrar tela de avaliação
+        if (!mostrarAvaliacao && data.motorista) {
+          const motorista = typeof data.motorista === "string" ? JSON.parse(data.motorista) : data.motorista
+          setCorridaFinalizada({
+            id: data.id,
+            motorista: {
+              id: motorista.id,
+              nome: motorista.nome,
+              foto: motorista.foto || "/diverse-professional-profiles.png",
+            },
+          })
+          setMostrarAvaliacao(true)
+
+          // Limpar solicitação
+          setSolicitacaoEnviada(false)
+          setSolicitacaoId(null)
+          setMotoristaAceito(null)
+          setMotoristaChegou(false)
+
+          // Remover do localStorage
+          localStorage.removeItem(SOLICITACAO_KEY)
+        }
       }
     } catch (error) {
       console.error("Erro ao verificar solicitação:", error)
     }
-  }, [solicitacaoId, motoristaAceito, notificationsInitialized, motoristaChegou])
+  }, [solicitacaoId, motoristaAceito, notificationsInitialized, motoristaChegou, mostrarAvaliacao])
 
   // Marcar componente como montado para evitar problemas de hidratação
   useEffect(() => {
@@ -231,8 +254,23 @@ export default function ClientePage() {
       }
 
       // Verificar se a solicitação foi cancelada ou finalizada
-      if (data.status === "cancelado" || data.status === "finalizada" || data.status === "recusado_por_motorista") {
+      if (data.status === "cancelado" || data.status === "recusado_por_motorista") {
         localStorage.removeItem(SOLICITACAO_KEY)
+        return
+      }
+
+      // Se a corrida foi finalizada, mostrar tela de avaliação
+      if (data.status === "finalizada" && data.motorista) {
+        const motorista = typeof data.motorista === "string" ? JSON.parse(data.motorista) : data.motorista
+        setCorridaFinalizada({
+          id: data.id,
+          motorista: {
+            id: motorista.id,
+            nome: motorista.nome,
+            foto: motorista.foto || "/diverse-professional-profiles.png",
+          },
+        })
+        setMostrarAvaliacao(true)
         return
       }
 
@@ -246,7 +284,7 @@ export default function ClientePage() {
         setMotoristaAceito({
           id: motorista.id,
           nome: motorista.nome,
-          foto: motorista.foto || "/placeholder.svg?height=100&width=100",
+          foto: motorista.foto || "/diverse-professional-profiles.png",
           veiculo: motorista.veiculo,
           placa: motorista.placa,
           tempoEspera: motorista.tempoEspera || 5,
@@ -254,7 +292,7 @@ export default function ClientePage() {
         })
 
         // Verificar se o motorista já chegou
-        if (data.motorista_chegou) {
+        if (motorista.status === "chegou") {
           console.log("Motorista já chegou (verificação inicial)")
           setMotoristaChegou(true)
 
@@ -315,7 +353,7 @@ export default function ClientePage() {
         setMotoristaAceito({
           id: motorista.id,
           nome: motorista.nome,
-          foto: motorista.foto || "/placeholder.svg?height=100&width=100",
+          foto: motorista.foto || "/diverse-professional-profiles.png",
           veiculo: motorista.veiculo,
           placa: motorista.placa,
           tempoEspera: tempoEstimado,
@@ -372,15 +410,18 @@ export default function ClientePage() {
     // Evento quando o motorista finaliza a corrida
     const handleCorridaFinalizada = (event: CustomEvent) => {
       const { id, motorista } = event.detail
+      console.log("Cliente: Evento corrida_finalizada recebido", id, solicitacaoId)
 
       // Verificar se a solicitação é para este cliente
       if (solicitacaoId && id === solicitacaoId) {
+        console.log("Cliente: Corrida finalizada! Mostrando tela de avaliação...")
+
         setCorridaFinalizada({
           id: id,
           motorista: {
             id: motorista.id,
             nome: motorista.nome,
-            foto: motorista.foto || "/placeholder.svg?height=100&width=100",
+            foto: motorista.foto || "/diverse-professional-profiles.png",
           },
         })
 
@@ -388,12 +429,7 @@ export default function ClientePage() {
 
         // Notificar o cliente
         if (notificationsInitialized) {
-          notificationService.notify({
-            title: "Corrida finalizada",
-            body: "Sua corrida foi finalizada. Por favor, avalie o motorista.",
-            type: "success",
-            sound: true,
-          })
+          notificationService.notifyRideCompleted(motorista.nome)
         }
 
         // Limpar solicitação
@@ -664,8 +700,14 @@ export default function ClientePage() {
     router.push("/")
   }
 
-  // Modificar o return do componente para incluir a tela de avaliação
-  // Adicione esta condição antes do return principal
+  // Verificar se o componente está montado para evitar problemas de hidratação
+  if (!isMounted) {
+    return null
+  }
+
+  console.log("Estado atual:", { motoristaChegou, motoristaAceito, mostrarAvaliacao })
+
+  // Modificar a renderização condicional para garantir que a tela de avaliação seja exibida
   if (mostrarAvaliacao && corridaFinalizada) {
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -686,14 +728,7 @@ export default function ClientePage() {
     )
   }
 
-  // Verificar se o componente está montado para evitar problemas de hidratação
-  if (!isMounted) {
-    return null
-  }
-
-  console.log("Estado atual:", { motoristaChegou, motoristaAceito })
-
-  // Modificar a renderização condicional para garantir que a animação de chegada seja exibida
+  // Renderização normal da página
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <header className="bg-blue-500 p-4 text-white flex items-center justify-between shadow-md">
@@ -873,7 +908,7 @@ export default function ClientePage() {
                   <div className="flex flex-col md:flex-row items-center gap-4 mt-4 bg-green-50 p-4 rounded-lg border border-green-200">
                     <div className="flex-shrink-0">
                       <img
-                        src={motoristaAceito.foto || "/placeholder.svg?height=150&width=150"}
+                        src={motoristaAceito.foto || "/placeholder.svg?height=150&width=150&query=profile"}
                         alt={motoristaAceito.nome}
                         className="w-24 h-24 rounded-full object-cover border-4 border-green-500"
                       />
@@ -893,7 +928,7 @@ export default function ClientePage() {
               ) : (
                 <div className="flex flex-col items-center">
                   <img
-                    src={motoristaAceito.foto || "/placeholder.svg?height=150&width=150"}
+                    src={motoristaAceito.foto || "/placeholder.svg?height=150&width=150&query=profile"}
                     alt={motoristaAceito.nome}
                     className="w-32 h-32 rounded-full object-cover mb-4 border-4 border-blue-500"
                   />

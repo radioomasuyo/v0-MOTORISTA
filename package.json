@@ -59,9 +59,11 @@
     "vaul": "^0.9.6",
     "zod": "^3.24.1",
     "chart.js": "latest",
+    "leaflet": "latest",
     "react-chartjs-2": "latest",
     "@radix-ui/react-icons": "latest",
-    "@supabase/supabase-js": "latest"
+    "@supabase/supabase-js": "latest",
+    "react-leaflet": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",

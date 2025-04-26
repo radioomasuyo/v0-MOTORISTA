@@ -8,12 +8,23 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import { ArrowLeft, CheckCircle, XCircle, MapPin, Navigation, LogIn, MessageCircle } from "lucide-react"
+import { ArrowLeft, CheckCircle, XCircle, MapPin, Navigation, LogIn, MessageCircle, Map } from "lucide-react"
 import Link from "next/link"
 import NotificationControl from "@/components/NotificationControl"
 import { notificationService } from "@/services/notificationService"
 import { toast } from "@/hooks/use-toast"
 import { finalizarCorrida, notificarChegadaMotorista } from "@/services/solicitacaoService"
+import dynamic from "next/dynamic"
+
+// Importar o componente de mapa de forma dinâmica (sem SSR)
+const MapaLocalizacao = dynamic(() => import("@/components/MapaLocalizacao"), {
+  ssr: false,
+  loading: () => (
+    <div className="bg-gray-100 rounded-lg animate-pulse flex items-center justify-center" style={{ height: "300px" }}>
+      <p className="text-gray-500">Carregando mapa...</p>
+    </div>
+  ),
+})
 
 type Coordenadas = {
   latitude: number
@@ -69,6 +80,7 @@ export default function MotoristaPage() {
   const [mostrarLogin, setMostrarLogin] = useState(false)
   const [chegouAoLocal, setChegouAoLocal] = useState(false)
   const [notificandoChegada, setNotificandoChegada] = useState(false)
+  const [mostrarMapa, setMostrarMapa] = useState(false)
 
   // Adicionar estado para controlar notificações
   const [notificationsInitialized, setNotificationsInitialized] = useState(false)
@@ -923,41 +935,15 @@ export default function MotoristaPage() {
   const dirigirAteCliente = useCallback((coordenadas: Coordenadas | null, localizacao: string) => {
     console.log("Abrindo navegação para o cliente:", { coordenadas, localizacao })
 
-    // Verificar e converter coordenadas se necessário
-    let coordenadasValidas: Coordenadas | null = null
-
-    if (coordenadas) {
-      // Verificar se as coordenadas estão no formato esperado
-      if ("latitude" in coordenadas && "longitude" in coordenadas) {
-        coordenadasValidas = coordenadas
-      }
-      // Verificar se as coordenadas estão em outro formato (lat/lon)
-      else if ("lat" in coordenadas && "lon" in coordenadas) {
-        coordenadasValidas = {
-          latitude: (coordenadas as any).lat,
-          longitude: (coordenadas as any).lon,
-        }
-        console.log("Convertendo formato de coordenadas lat/lon para latitude/longitude:", coordenadasValidas)
-      }
-      // Verificar se as coordenadas estão em formato de array [longitude, latitude]
-      else if (Array.isArray(coordenadas) && coordenadas.length === 2) {
-        coordenadasValidas = {
-          latitude: coordenadas[1],
-          longitude: coordenadas[0],
-        }
-        console.log("Convertendo formato de array para latitude/longitude:", coordenadasValidas)
-      }
-    }
-
-    if (!coordenadasValidas) {
-      console.warn(
-        "Coordenadas do cliente não disponíveis ou em formato inválido, tentando usar a localização como texto",
-      )
+    // Verificar se temos coordenadas válidas
+    if (!coordenadas || (!coordenadas.latitude && !coordenadas.longitude)) {
+      console.warn("Coordenadas do cliente não disponíveis ou inválidas:", coordenadas)
 
       // Se não temos coordenadas, tentar usar o endereço como texto
       try {
         // Codificar o endereço para URL
         const enderecoEncoded = encodeURIComponent(localizacao)
+        console.log("Usando endereço textual para navegação:", enderecoEncoded)
 
         // Verificar se é dispositivo móvel
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
@@ -978,20 +964,20 @@ export default function MotoristaPage() {
           // No desktop, abre o Google Maps diretamente com o endereço
           window.open(`https://www.google.com/maps/search/?api=1&query=${enderecoEncoded}`, "_blank")
         }
-        return
       } catch (error) {
         console.warn("Erro ao abrir navegação com endereço:", error)
         toast({
           title: "Erro",
-          description: "Coordenadas não disponíveis e não foi possível usar o endereço",
+          description: "Não foi possível abrir a navegação para o cliente",
           variant: "destructive",
         })
-        return
       }
+      return
     }
 
     try {
-      const { latitude, longitude } = coordenadasValidas
+      // Extrair coordenadas
+      const { latitude, longitude } = coordenadas
       console.log("Usando coordenadas para navegação:", latitude, longitude)
 
       // Verificar se é dispositivo móvel
@@ -1028,7 +1014,7 @@ export default function MotoristaPage() {
       console.warn("Erro ao abrir navegação:", error)
       toast({
         title: "Erro",
-        description: "Não foi possível abrir a navegação",
+        description: "Não foi possível abrir a navegação para o cliente",
         variant: "destructive",
       })
     }
@@ -1280,6 +1266,30 @@ export default function MotoristaPage() {
                     <p className="text-blue-800">
                       <span className="font-bold">Distância até o cliente:</span> {corridaAceita.distanciaCliente} km
                     </p>
+                  </div>
+                )}
+
+                {/* Botão para mostrar/ocultar o mapa */}
+                <Button
+                  variant="outline"
+                  className="w-full flex items-center justify-center"
+                  onClick={() => setMostrarMapa(!mostrarMapa)}
+                >
+                  <Map size={18} className="mr-2" />
+                  {mostrarMapa ? "Ocultar Mapa" : "Mostrar Mapa"}
+                </Button>
+
+                {/* Mapa com a localização do cliente */}
+                {mostrarMapa && (
+                  <div className="mt-2">
+                    <MapaLocalizacao
+                      motoristaCoords={motoristaCoords}
+                      clienteCoords={corridaAceita.cliente.coordenadas}
+                      clienteNome={corridaAceita.cliente.nome}
+                      clienteEndereco={corridaAceita.cliente.localizacao}
+                      altura="300px"
+                      className="border border-gray-200 shadow-sm"
+                    />
                   </div>
                 )}
               </div>

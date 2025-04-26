@@ -75,7 +75,7 @@ export default function AvaliacaoMotorista({ motorista, onAvaliacaoConcluida }: 
       <CardContent className="space-y-6">
         <div className="flex flex-col items-center">
           <img
-            src={motorista.foto || "/placeholder.svg"}
+            src={motorista.foto || "/placeholder.svg?height=150&width=150&query=profile"}
             alt={motorista.nome}
             className="w-24 h-24 rounded-full object-cover mb-2"
           />
